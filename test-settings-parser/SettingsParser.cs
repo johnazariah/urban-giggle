@@ -1,8 +1,10 @@
+using metadata_writer;
+
 namespace test_setup_parser
 {
     public class SettingsParserTests
     {
-        private readonly SettingsParser.SettingsParser parser;
+        private readonly SettingsParser parser;
 
         public SettingsParserTests()
         {
@@ -11,7 +13,7 @@ namespace test_setup_parser
             Environment.SetEnvironmentVariable("environmentVariableName", "value2");
 
             // create instance of SettingsParser and pass mock IConfigurationRoot object to constructor
-            parser = new SettingsParser.SettingsParser(new[] { "--commandLineArgumentName=value1" } );
+            parser = new SettingsParser(new[] { "--commandLineArgumentName=value1" } );
         }
 
         [Fact]
@@ -42,7 +44,7 @@ namespace test_setup_parser
             // set up settings.json section
             var mockConfig = new Mock<IConfigurationRoot>();
             mockConfig.SetupGet(x => x["configurationSettingName"]).Returns("value3");
-            typeof(SettingsParser.SettingsParser)?.GetField("config", BindingFlags.Instance | BindingFlags.NonPublic)?.SetValue(parser, mockConfig.Object);
+            typeof(SettingsParser)?.GetField("config", BindingFlags.Instance | BindingFlags.NonPublic)?.SetValue(parser, mockConfig.Object);
 
             var result = parser.GetSetting(
                 "",
@@ -83,7 +85,7 @@ namespace test_setup_parser
             // set up settings.json section
             var mockConfig = new Mock<IConfigurationRoot>();
             mockConfig.SetupGet(x => x["numericSetting"]).Returns("23");
-            typeof(SettingsParser.SettingsParser)?.GetField("config", BindingFlags.Instance | BindingFlags.NonPublic)?.SetValue(parser, mockConfig.Object);
+            typeof(SettingsParser)?.GetField("config", BindingFlags.Instance | BindingFlags.NonPublic)?.SetValue(parser, mockConfig.Object);
 
             var result = parser.GetSetting(
                 "bogus_cla",
