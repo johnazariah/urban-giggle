@@ -4,6 +4,8 @@ using System.Data;
 
 namespace metadata_writer
 {
+    public readonly record struct Artefact(DateTime Timestamp, string Name, string Location);
+
     public class MetadataWriterService : BackgroundService
     {
         private readonly MetadataWriterSettings _settings;
@@ -60,25 +62,11 @@ namespace metadata_writer
 
         private static KustoQuery<Artefact> BuildQuery(string kusto_db_name, string continuous_export_name)
         {
-            Artefact readArtefact(IDataReader r) =>
+            static Artefact readArtefact(IDataReader r) =>
                 new(r.GetDateTime(0), r.GetString(1), r.GetString(2));
 
             var show_exported_artefacts_query = $".show continuous-export {continuous_export_name} exported-artifacts";
-            return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, readArtefact);
-        }
-    }
-
-    public readonly record struct Artefact
-    {
-        public DateTime Timestamp { get; }
-        public string Name { get; }
-        public string Location { get; }
-
-        public Artefact(DateTime timestamp, string name, string location)
-        {
-            Timestamp = timestamp;
-            Name = name;
-            Location = location;
+            return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, readArtefact, new Kusto.Data.Common.ClientRequestProperties());
         }
     }
 }

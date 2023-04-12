@@ -6,21 +6,7 @@ using System.Data;
 
 namespace metadata_writer
 {
-    public readonly record struct KustoQuery<T>
-    {
-        public string DatabaseName { get; }
-        public string Query { get; }
-        public Func<IDataReader, T> ResultSelector { get; }
-        public ClientRequestProperties ClientRequestProperties { get; }
-
-        public KustoQuery(string databaseName, string query, Func<IDataReader, T> resultSelector, ClientRequestProperties? clientRequestProperties = null)
-        {
-            DatabaseName = databaseName;
-            Query = query;
-            ResultSelector = resultSelector;
-            ClientRequestProperties = clientRequestProperties ?? new ClientRequestProperties();
-        }
-    }
+    public readonly record struct KustoQuery<T>(string DatabaseName, string Query, Func<IDataReader, T> ResultSelector, ClientRequestProperties ClientRequestProperties);
 
     public class KustoQueryExecutor : IDisposable
     {

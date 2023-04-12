@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace metadata_writer
 {
-
     public class Program
     {
         private static async Task Main(string[] args)

@@ -1,20 +1,7 @@
 ﻿namespace metadata_writer
 {
-    public class MetadataWriterSettings
+    public record class MetadataWriterSettings(Uri KustoEndpoint, string ManagedIdentityId, string KustoDatabaseName, string ContinuousExportName)
     {
-        public Uri KustoEndpoint { get; }
-        public string ManagedIdentityId { get; }
-        public string KustoDatabaseName { get; }
-        public string ContinuousExportName { get; }
-
-        public MetadataWriterSettings(Uri kustoEndpoint, string managedIdentityId, string kustoDatabaseName, string continuousExportName)
-        {
-            KustoEndpoint = kustoEndpoint;
-            ManagedIdentityId = managedIdentityId;
-            KustoDatabaseName = kustoDatabaseName;
-            ContinuousExportName = continuousExportName;
-        }
-
         public static MetadataWriterSettings ReadSettings(string[] args)
         {
             var settingsParser = new SettingsParser(args);
