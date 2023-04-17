@@ -125,12 +125,7 @@ namespace metadata_writer
                 var uniqueSlices =
                     await slices.ToHashSetAsync(cancellationToken: cancellationToken);
 
-                // WARNING: can't do this because EF chokes on parallel writes
-                // await Task.WhenAll(uniqueSlices.Select(writeSlice));
-                foreach ( var slice in uniqueSlices )
-                {
-                    await writeSlice(slice);
-                }
+                await Task.WhenAll(uniqueSlices.Select(writeSlice));
 
                 _logger.LogInformation($"Fetched {uniqueSlices.Count} unique artefacts from Kusto.");
             }
