@@ -1,6 +1,12 @@
 ﻿namespace metadata_writer
 {
-    public record class MetadataWriterSettings(Uri KustoEndpoint, string ManagedIdentityId, string KustoDatabaseName, string ContinuousExportName)
+    public record class MetadataWriterSettings(
+        Uri KustoEndpoint,
+        string ManagedIdentityId,
+        string KustoDatabaseName,
+        string ContinuousExportName,
+        string MetadataDbConnectionString,
+        string MetadataTableName)
     {
         public static MetadataWriterSettings ReadSettings(string[] args)
         {
@@ -34,7 +40,28 @@
                     "KustoExportName",
                     "ExportSplitUsageRecords");
 
-            return new MetadataWriterSettings(kusto_cluster_uri, managed_identity, kusto_db_name, continuous_export_name);
+            var metadata_db_connection_string = settingsParser
+                .GetSetting(
+                    "metadata-db-connection-string",
+                    "METADATA_DB_CONN_STR",
+                    "MetadataDbConnectionString",
+                    "Server=tcp:ccm-aks-dev.database.windows.net,1433;Initial Catalog=ccmmetadata;Persist Security Info=False;User ID=ccmadmin;Password=9QdxWgnhCc;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
+                    //"Server=tcp:ccm-aks-dev.database.windows.net,1433;Initial Catalog=ccmmetadata;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=\"Active Directory Default\";");
+
+            var metadata_table_name = settingsParser
+                .GetSetting(
+                    "metadata-table-name",
+                    "METADATA_TABLE_NAME",
+                    "MetadataTableName",
+                    "SliceIndex");
+
+            return new MetadataWriterSettings(
+                kusto_cluster_uri,
+                managed_identity,
+                kusto_db_name,
+                continuous_export_name,
+                metadata_db_connection_string,
+                metadata_table_name);
         }
     }
 }

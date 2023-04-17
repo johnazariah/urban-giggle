@@ -27,11 +27,15 @@ namespace metadata_writer
                 .ConfigureServices((hostContext, services) =>
                 {
                     // Register services.
-                    services.AddHostedService<MetadataWriterService>();
                     services.AddSingleton(MetadataWriterSettings.ReadSettings(args));
+                    services.AddHostedService<MetadataWriterService>();
                 });
 
-            await builder.RunConsoleAsync();
+            var host = builder.Build();
+
+            await host.StartAsync();
+            await host.StopAsync();
+            await host.WaitForShutdownAsync();
         }
     }
 }
