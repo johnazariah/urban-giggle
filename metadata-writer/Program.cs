@@ -1,28 +1,40 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿//#define CLI_DEBUG
+#if CLI_DEBUG
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+#endif
+using Microsoft.Extensions.Hosting;
 
 namespace metadata_writer
 {
     public class Program
     {
-        private static async Task Main(string[] args)
+        public static async Task Main(string[] args)
         {
+#if !CLI_DEBUG
+            await new HostBuilder()
+                .ConfigureFunctionsWorkerDefaults()
+                .Build()
+                .RunAsync();
+#else
             var builder = new HostBuilder()
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
                     // Configure the app configuration file.
-                    config.SetBasePath(AppDomain.CurrentDomain.BaseDirectory);
-                    config.AddJsonFile("appsettings.json", optional: true);
-                    config.AddCommandLine(args);
+                    config
+                        .AddCommandLine(args)
+                        .AddEnvironmentVariables()
+                        .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
                 })
                 .ConfigureLogging((hostingContext, logging) =>
                 {
                     // Configure logging.
-                    logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
-                    logging.AddConsole();
-                    logging.AddDebug();
+                    logging
+                        .AddConfiguration(hostingContext.Configuration.GetSection("Logging"))
+                        .AddConsole()
+                        .AddDebug();
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
@@ -36,6 +48,7 @@ namespace metadata_writer
             await host.StartAsync();
             await host.StopAsync();
             await host.WaitForShutdownAsync();
+#endif
         }
     }
 }

@@ -43,19 +43,25 @@ namespace metadata_writer
 
     public class MetadataWriterService : IHostedService
     {
+        private readonly ILogger _logger;
+        private readonly CancellationTokenSource _cts = new();
         private readonly MetadataWriterSettings _settings;
-        private readonly ILogger<MetadataWriterService> _logger;
         private readonly KustoQueryExecutor _kustoQueryExecutor;
         private readonly KustoQuery<Artefact> _kustoQuery;
         private readonly MetadataDbContext _metadataDbContext;
-        private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        
-        private readonly Regex parser = new Regex(@"https://(?<server>\w+).(?<url>[.\w]*)/(?<container>\w+)/(?<channel>\w+)/(?<exportDate>\w{8})/(?<exportTime>\w{4})/(?<usageDateKey>\w{8})/(?<filepath>[-\w]+).(?<extn>\w+)");
 
-        public MetadataWriterService(MetadataWriterSettings settings, ILogger<MetadataWriterService> logger)
+        private readonly Regex parser = new(@"https://(?<server>\w+).(?<url>[.\w]*)/(?<container>\w+)/(?<channel>\w+)/(?<exportDate>\w{8})/(?<exportTime>\w{4})/(?<usageDateKey>\w{8})/(?<filepath>[-\w]+).(?<extn>\w+)");
+
+        private static KustoQuery<Artefact> BuildQuery(string kusto_db_name, string continuous_export_name)
+        {
+            var show_exported_artefacts_query = $".show continuous-export {continuous_export_name} exported-artifacts | order by Timestamp desc | where Timestamp > ago(24h)";
+            return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, Artefact.Read, new Kusto.Data.Common.ClientRequestProperties());
+        }
+
+        public MetadataWriterService(MetadataWriterSettings settings, ILogger? logger = null)
         {
             _settings = settings;
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _logger = logger ?? (LoggerFactory.Create(b => b.AddConsole()).CreateLogger<MetadataWriterService>());
             _kustoQueryExecutor = new KustoQueryExecutor(_settings.KustoEndpoint, _settings.ManagedIdentityId);
             _kustoQuery = BuildQuery(_settings.KustoDatabaseName, _settings.ContinuousExportName);
             _metadataDbContext = new MetadataDbContext(_settings.MetadataDbConnectionString, _settings.MetadataTableName);
@@ -116,7 +122,7 @@ namespace metadata_writer
             {
                 _logger.LogInformation("Executing query to fetch exported artifacts from Kusto...");
 
-                var slices = 
+                var slices =
                     from artefact in _kustoQueryExecutor.ExecuteQueryAsync(_kustoQuery)
                     let slice = toSlice(artefact)
                     where slice is not null
@@ -125,7 +131,14 @@ namespace metadata_writer
                 var uniqueSlices =
                     await slices.ToHashSetAsync(cancellationToken: cancellationToken);
 
-                await Task.WhenAll(uniqueSlices.Select(writeSlice));
+                // WARNING: Do not do things like this because the EF dbContext cannot handle concurrent writes
+                // await Task.WhenAll(uniqueSlices.Select(writeSlice));
+                //
+                // Instead, write each slice one at a time
+                foreach (var slice in uniqueSlices)
+                {
+                    await writeSlice(slice);
+                }
 
                 _logger.LogInformation($"Fetched {uniqueSlices.Count} unique artefacts from Kusto.");
             }
@@ -136,6 +149,7 @@ namespace metadata_writer
 
             _logger.LogInformation("MetadataWriterService stopped.");
         }
+
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Stopping the service.");
@@ -146,10 +160,11 @@ namespace metadata_writer
             return Task.CompletedTask;
         }
 
-        private static KustoQuery<Artefact> BuildQuery(string kusto_db_name, string continuous_export_name)
+        public static async Task WriteMetadata(MetadataWriterSettings settings, ILogger logger)
         {
-            var show_exported_artefacts_query = $".show continuous-export {continuous_export_name} exported-artifacts | order by Timestamp desc | where Timestamp > ago(24h)";
-            return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, Artefact.Read, new Kusto.Data.Common.ClientRequestProperties());
+            var _writer = new MetadataWriterService(settings, logger);
+            await _writer.StartAsync(CancellationToken.None);
+            await _writer.StopAsync(CancellationToken.None);
         }
     }
 }

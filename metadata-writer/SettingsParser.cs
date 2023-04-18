@@ -9,10 +9,10 @@ namespace metadata_writer
 
         public SettingsParser(string[] args) => config =
             new ConfigurationBuilder()
-              .AddCommandLine(args)
-              .AddEnvironmentVariables()
-              .AddJsonFile("settings.json", true)
-              .Build();
+                .AddCommandLine(args)
+                .AddEnvironmentVariables()
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+                .Build();
 
         public string GetSetting(
             string commandLineArgumentName,
