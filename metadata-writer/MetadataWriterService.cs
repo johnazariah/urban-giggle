@@ -1,6 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using System.Data;
 using System.Text.RegularExpressions;
 
@@ -14,41 +12,13 @@ namespace metadata_writer
 
     public record SliceIndex(string? StreamName, string? Slice, string? SlicePath, DateTime? PublishTime, string? RunId, long? RecordCount);
 
-    public class MetadataDbContext : DbContext
+    public class MetadataWriterService
     {
-        private readonly string _connectionString;
-        private readonly string _tableName;
-
-        public DbSet<SliceIndex>? SliceIndices { get; set; }
-
-        public MetadataDbContext(string connectionString, string tableName)
-        {
-            _connectionString = connectionString;
-            _tableName = tableName;
-        }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlServer(_connectionString);
-        }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder
-                .Entity<SliceIndex>()
-                .ToTable(_tableName)
-                .HasKey(x => new { x.Slice, x.RunId });
-        }
-    }
-
-    public class MetadataWriterService : IHostedService
-    {
-        private readonly ILogger _logger;
         private readonly CancellationTokenSource _cts = new();
         private readonly MetadataWriterSettings _settings;
+        private readonly ILogger _logger;
         private readonly KustoQueryExecutor _kustoQueryExecutor;
         private readonly KustoQuery<Artefact> _kustoQuery;
-        private readonly MetadataDbContext _metadataDbContext;
 
         private readonly Regex parser = new(@"https://(?<server>\w+).(?<url>[.\w]*)/(?<container>\w+)/(?<channel>\w+)/(?<exportDate>\w{8})/(?<exportTime>\w{4})/(?<usageDateKey>\w{8})/(?<filepath>[-\w]+).(?<extn>\w+)");
 
@@ -58,29 +28,13 @@ namespace metadata_writer
             return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, Artefact.Read, new Kusto.Data.Common.ClientRequestProperties());
         }
 
-        public MetadataWriterService(MetadataWriterSettings settings, ILogger? logger = null)
+        public MetadataWriterService(MetadataWriterSettings settings, ILogger logger, KustoQueryExecutor kustoQueryExecutor)
         {
             _settings = settings;
-            _logger = logger ?? (LoggerFactory.Create(b => b.AddConsole()).CreateLogger<MetadataWriterService>());
-            _kustoQueryExecutor = new KustoQueryExecutor(_settings.KustoEndpoint, _settings.ManagedIdentityId);
+            _logger = logger;
+            _kustoQueryExecutor = kustoQueryExecutor;
             _kustoQuery = BuildQuery(_settings.KustoDatabaseName, _settings.ContinuousExportName);
-            _metadataDbContext = new MetadataDbContext(_settings.MetadataDbConnectionString, _settings.MetadataTableName);
         }
-
-        private Func<SliceIndex, Task> WriteSliceRecord(CancellationToken stoppingToken) =>
-            async slice =>
-            {
-                var existingRecord = _metadataDbContext.SliceIndices?.FirstOrDefault(e => e.SlicePath == slice.SlicePath);
-                if (existingRecord != null)
-                {
-                    _logger.LogInformation($"Found record for {slice.SlicePath} already. Skipping");
-                    return;
-                }
-
-                _logger.LogInformation($"Writing {slice} to database");
-                await _metadataDbContext.AddAsync(slice, cancellationToken: stoppingToken);
-                await _metadataDbContext.SaveChangesAsync(cancellationToken: stoppingToken);
-            };
 
         private Func<Artefact, SliceIndex?> ToSliceIndex(DateTime publishTime) =>
             artefact =>
@@ -111,12 +65,11 @@ namespace metadata_writer
                 return null;
             };
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public async Task<HashSet<SliceIndex>> FetchSlices(CancellationToken cancellationToken)
         {
             _logger.LogInformation($"MetadataWriterService started. [{_settings}]");
 
             var toSlice = ToSliceIndex(DateTime.UtcNow);
-            var writeSlice = WriteSliceRecord(cancellationToken);
 
             try
             {
@@ -131,41 +84,15 @@ namespace metadata_writer
                 var uniqueSlices =
                     await slices.ToHashSetAsync(cancellationToken: cancellationToken);
 
-                // WARNING: Do not do things like this because the EF dbContext cannot handle concurrent writes
-                // await Task.WhenAll(uniqueSlices.Select(writeSlice));
-                //
-                // Instead, write each slice one at a time
-                foreach (var slice in uniqueSlices)
-                {
-                    _logger.LogInformation($"Writing Slice: {slice}");
-                    await writeSlice(slice);
-                }
-
                 _logger.LogInformation($"Fetched {uniqueSlices.Count} unique artefacts from Kusto.");
+
+                return uniqueSlices;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error occured while fetching artefacts from Kusto.");
+                _logger.LogError(ex, "Error occurred while fetching artefacts from Kusto.");
+                throw;
             }
-
-            _logger.LogInformation("MetadataWriterService stopped.");
-        }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Stopping the service.");
-
-            _cts.Cancel();
-            _kustoQueryExecutor.Dispose();
-
-            return Task.CompletedTask;
-        }
-
-        public static async Task WriteMetadata(ILogger logger)
-        {
-            var _writer = new MetadataWriterService(MetadataWriterSettings.ReadSettings(new string[] { }), logger);
-            await _writer.StartAsync(CancellationToken.None);
-            await _writer.StopAsync(CancellationToken.None);
         }
     }
 }
