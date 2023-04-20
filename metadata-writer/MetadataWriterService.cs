@@ -54,7 +54,7 @@ namespace metadata_writer
 
         private static KustoQuery<Artefact> BuildQuery(string kusto_db_name, string continuous_export_name)
         {
-            var show_exported_artefacts_query = $".show continuous-export {continuous_export_name} exported-artifacts | order by Timestamp desc | where Timestamp > ago(24h)";
+            var show_exported_artefacts_query = $".show continuous-export {continuous_export_name} exported-artifacts | where Timestamp > ago(24h) | order by Timestamp desc";
             return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, Artefact.Read, new Kusto.Data.Common.ClientRequestProperties());
         }
 
@@ -113,14 +113,14 @@ namespace metadata_writer
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("MetadataWriterService started.");
+            _logger.LogInformation($"MetadataWriterService started. [{_settings}]");
 
             var toSlice = ToSliceIndex(DateTime.UtcNow);
             var writeSlice = WriteSliceRecord(cancellationToken);
 
             try
             {
-                _logger.LogInformation("Executing query to fetch exported artifacts from Kusto...");
+                _logger.LogInformation($"Executing [{_kustoQuery}] to fetch exported artifacts from Kusto");
 
                 var slices =
                     from artefact in _kustoQueryExecutor.ExecuteQueryAsync(_kustoQuery)
@@ -137,6 +137,7 @@ namespace metadata_writer
                 // Instead, write each slice one at a time
                 foreach (var slice in uniqueSlices)
                 {
+                    _logger.LogInformation($"Writing Slice: {slice}");
                     await writeSlice(slice);
                 }
 
@@ -160,9 +161,9 @@ namespace metadata_writer
             return Task.CompletedTask;
         }
 
-        public static async Task WriteMetadata(MetadataWriterSettings settings, ILogger logger)
+        public static async Task WriteMetadata(ILogger logger)
         {
-            var _writer = new MetadataWriterService(settings, logger);
+            var _writer = new MetadataWriterService(MetadataWriterSettings.ReadSettings(new string[] { }), logger);
             await _writer.StartAsync(CancellationToken.None);
             await _writer.StopAsync(CancellationToken.None);
         }

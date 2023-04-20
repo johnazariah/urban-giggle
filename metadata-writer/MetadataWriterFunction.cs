@@ -14,11 +14,10 @@ namespace metadata_writer_function
         }
 
         [Function("MetadataWriterFunction")]
-        public void Run([TimerTrigger("0 * * * * *")] TimerInfo timer)
+        public async Task Run([TimerTrigger("0 * * * * *")] TimerInfo timer)
         {
             _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.UtcNow}; Next timer schedule at: {timer?.ScheduleStatus?.Next}");
-            var settings = MetadataWriterSettings.ReadSettings(new string[] { });
-            MetadataWriterService.WriteMetadata(settings, _logger).RunSynchronously();
+            await MetadataWriterService.WriteMetadata(_logger);
         }
     }
 }
