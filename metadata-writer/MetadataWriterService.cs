@@ -128,20 +128,36 @@ namespace metadata_writer
                     where slice is not null
                     select slice;
 
+                _logger.LogInformation("...obtained slices...");
+
                 var uniqueSlices =
                     await slices.ToHashSetAsync(cancellationToken: cancellationToken);
+
+                _logger.LogInformation("...obtained unique slices...");
 
                 // WARNING: Do not do things like this because the EF dbContext cannot handle concurrent writes
                 // await Task.WhenAll(uniqueSlices.Select(writeSlice));
                 //
                 // Instead, write each slice one at a time
+                var successes = 0;
                 foreach (var slice in uniqueSlices)
                 {
-                    _logger.LogInformation($"Writing Slice: {slice}");
-                    await writeSlice(slice);
+                    try
+                    {
+                        _logger.LogInformation($"Trying to write Slice {slice} ...");
+                        await writeSlice(slice);
+                        successes++;
+                        _logger.LogInformation($"... and succeeded!");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "... and failed! Continuing");
+                        _logger.LogInformation("Encountered Exception [{0}]", ex.Message);
+                    }
                 }
 
                 _logger.LogInformation($"Fetched {uniqueSlices.Count} unique artefacts from Kusto.");
+                _logger.LogInformation($"Wrote {successes} unique slices to the metadata database.");
             }
             catch (Exception ex)
             {

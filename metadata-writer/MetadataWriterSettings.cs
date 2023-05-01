@@ -45,7 +45,7 @@
                     "metadata-db-connection-string",
                     "METADATA_DB_CONN_STR",
                     "MetadataDbConnectionString",
-                    "Server=tcp:ccm-aks-dev.database.windows.net,1433;Initial Catalog=ccmmetadata;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=\"Active Directory Default\";");
+                    "Server=tcp:ccm-aks-dev.database.windows.net,1433;Initial Catalog=ccmmetadata;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;Authentication=\"Active Directory Managed Identity\";User ID=\"5e8cfb80-8c2a-4b7e-99c6-12178769079b\"");
 
             var metadata_table_name = settingsParser
                 .GetSetting(

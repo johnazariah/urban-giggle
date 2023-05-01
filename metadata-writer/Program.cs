@@ -1,10 +1,11 @@
 ﻿//#define CLI_DEBUG
 #if CLI_DEBUG
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 #endif
+
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace metadata_writer
 {
@@ -12,13 +13,10 @@ namespace metadata_writer
     {
         public static async Task Main(string[] args)
         {
-#if !CLI_DEBUG
-            await new HostBuilder()
-                .ConfigureFunctionsWorkerDefaults()
-                .Build()
-                .RunAsync();
-#else
             var builder = new HostBuilder()
+#if !CLI_DEBUG
+                .ConfigureFunctionsWorkerDefaults()
+#endif
                 .ConfigureAppConfiguration((hostingContext, config) =>
                 {
                     // Configure the app configuration file.
@@ -35,19 +33,23 @@ namespace metadata_writer
                         .AddConfiguration(hostingContext.Configuration.GetSection("Logging"))
                         .AddConsole()
                         .AddDebug();
+#if CLI_DEBUG
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
                     // Register services.
                     services.AddSingleton(MetadataWriterSettings.ReadSettings(args));
                     services.AddHostedService<MetadataWriterService>();
+#endif
                 });
 
             var host = builder.Build();
-
+#if CLI_DEBUG
             await host.StartAsync();
             await host.StopAsync();
             await host.WaitForShutdownAsync();
+#else
+            await host.RunAsync();
 #endif
         }
     }
