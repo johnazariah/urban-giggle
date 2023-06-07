@@ -5,14 +5,15 @@ namespace metadata_writer
 {
     public class SettingsParser
     {
-        internal readonly IConfigurationRoot config;
+        internal readonly IConfiguration config;
 
-        public SettingsParser(string[] args) => config =
-            new ConfigurationBuilder()
+        public SettingsParser(IConfiguration? configuration, string[] args) => config =
+            (configuration 
+            ?? new ConfigurationBuilder()
                 .AddCommandLine(args)
                 .AddEnvironmentVariables()
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                .Build();
+                .Build());
 
         public string GetSetting(
             string commandLineArgumentName,

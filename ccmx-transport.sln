@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "metadata-writer", "metadata
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "test-settings-parser", "test-settings-parser\test-settings-parser.csproj", "{520262E7-E55F-4C0A-B96D-F135A3CC7EA2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "agdistis", "agdistis\agdistis.csproj", "{51DB0848-1AB3-49D9-AD0C-7838B4FF0112}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{520262E7-E55F-4C0A-B96D-F135A3CC7EA2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{520262E7-E55F-4C0A-B96D-F135A3CC7EA2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{520262E7-E55F-4C0A-B96D-F135A3CC7EA2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{51DB0848-1AB3-49D9-AD0C-7838B4FF0112}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{51DB0848-1AB3-49D9-AD0C-7838B4FF0112}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{51DB0848-1AB3-49D9-AD0C-7838B4FF0112}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{51DB0848-1AB3-49D9-AD0C-7838B4FF0112}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

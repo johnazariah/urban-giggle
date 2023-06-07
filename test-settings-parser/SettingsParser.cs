@@ -13,7 +13,7 @@ namespace test_setup_parser
             Environment.SetEnvironmentVariable("environmentVariableName", "value2");
 
             // create instance of SettingsParser and pass mock IConfigurationRoot object to constructor
-            parser = new SettingsParser(new[] { "--commandLineArgumentName=value1" });
+            parser = new SettingsParser(null, new[] { "--commandLineArgumentName=value1" });
         }
 
         [Fact]

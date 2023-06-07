@@ -58,10 +58,10 @@ namespace metadata_writer
             return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, Artefact.Read, new Kusto.Data.Common.ClientRequestProperties());
         }
 
-        public MetadataWriterService(MetadataWriterSettings settings, ILogger? logger = null)
+        public MetadataWriterService(MetadataWriterSettings settings, ILogger<MetadataWriterService> logger)
         {
             _settings = settings;
-            _logger = logger ?? (LoggerFactory.Create(b => b.AddConsole()).CreateLogger<MetadataWriterService>());
+            _logger = logger;
             _kustoQueryExecutor = new KustoQueryExecutor(_settings.KustoEndpoint, _settings.ManagedIdentityId);
             _kustoQuery = BuildQuery(_settings.KustoDatabaseName, _settings.ContinuousExportName);
             _metadataDbContext = new MetadataDbContext(_settings.MetadataDbConnectionString, _settings.MetadataTableName);
@@ -177,11 +177,10 @@ namespace metadata_writer
             return Task.CompletedTask;
         }
 
-        public static async Task WriteMetadata(ILogger logger)
+        public async Task WriteMetadata()
         {
-            var _writer = new MetadataWriterService(MetadataWriterSettings.ReadSettings(new string[] { }), logger);
-            await _writer.StartAsync(CancellationToken.None);
-            await _writer.StopAsync(CancellationToken.None);
+            await StartAsync(CancellationToken.None);
+            await StopAsync(CancellationToken.None);
         }
     }
 }

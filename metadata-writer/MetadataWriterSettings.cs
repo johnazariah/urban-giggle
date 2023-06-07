@@ -1,4 +1,5 @@
-﻿namespace metadata_writer
+﻿using Microsoft.Extensions.Configuration;
+namespace metadata_writer
 {
     public record class MetadataWriterSettings(
         Uri KustoEndpoint,
@@ -8,9 +9,9 @@
         string MetadataDbConnectionString,
         string MetadataTableName)
     {
-        public static MetadataWriterSettings ReadSettings(string[] args)
+        public static MetadataWriterSettings ReadSettings(IConfiguration configuration, string[] args)
         {
-            var settingsParser = new SettingsParser(args);
+            var settingsParser = new SettingsParser(configuration, args);
             var kusto_cluster_uri = settingsParser
                 .GetSetting(
                     "kusto-cluster-uri",
