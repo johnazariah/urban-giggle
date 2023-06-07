@@ -44,9 +44,9 @@ namespace metadata_writer
     public class MetadataWriterService : IHostedService
     {
         private readonly ILogger _logger;
+        private readonly KustoQueryExecutor _kustoQueryExecutor;
         private readonly CancellationTokenSource _cts = new();
         private readonly MetadataWriterSettings _settings;
-        private readonly KustoQueryExecutor _kustoQueryExecutor;
         private readonly KustoQuery<Artefact> _kustoQuery;
         private readonly MetadataDbContext _metadataDbContext;
 
@@ -54,7 +54,7 @@ namespace metadata_writer
 
         private static KustoQuery<Artefact> BuildQuery(string kusto_db_name, string continuous_export_name)
         {
-            var show_exported_artefacts_query = $".show continuous-export {continuous_export_name} exported-artifacts | where Timestamp > ago(24h) | order by Timestamp desc";
+            var show_exported_artefacts_query = $".show continuous-export {continuous_export_name} exported-artifacts | where Timestamp > ago(33d) | order by Timestamp desc";
             return new KustoQuery<Artefact>(kusto_db_name, show_exported_artefacts_query, Artefact.Read, new Kusto.Data.Common.ClientRequestProperties());
         }
 
@@ -170,9 +170,7 @@ namespace metadata_writer
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("Stopping the service.");
-
             _cts.Cancel();
-            _kustoQueryExecutor.Dispose();
 
             return Task.CompletedTask;
         }
